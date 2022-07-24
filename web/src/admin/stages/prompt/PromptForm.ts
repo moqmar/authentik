@@ -212,6 +212,12 @@ export class PromptForm extends ModelForm<Prompt, string> {
                 ${msg("File")}
             </option>
             <option
+                value=${PromptTypeEnum.Html}
+                ?selected=${this.instance?.type === PromptTypeEnum.Html}
+            >
+                ${t`HTML: Fully customizable field rendered as an iframe.`}
+            </option>
+            <option
                 value=${PromptTypeEnum.Separator}
                 ?selected=${this.instance?.type === PromptTypeEnum.Separator}
             >

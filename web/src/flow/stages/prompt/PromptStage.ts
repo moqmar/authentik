@@ -8,6 +8,7 @@ import { BaseStage } from "@goauthentik/flow/stages/base";
 import { msg } from "@lit/localize";
 import { CSSResult, TemplateResult, css, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { ref, createRef } from "lit/directives/ref.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 
 import PFAlert from "@patternfly/patternfly/components/Alert/alert.css";
@@ -29,6 +30,30 @@ import {
 
 @customElement("ak-stage-prompt")
 export class PromptStage extends BaseStage<PromptChallenge, PromptChallengeResponseRequest> {
+
+    constructor() {
+        super();
+
+        // For HTML fields, handle messages posted from the iFrame (height & value):
+        window.addEventListener("message", (event) => {
+            const iframes = [...this.shadowRoot?.querySelectorAll("iframe.ak-html-prompt-iframe") || []] as HTMLIFrameElement[];
+            const iframe = iframes.find(x => x.contentWindow === event.source);
+            if (!iframe) return;
+            if (event.data.scrollHeight !== undefined) {
+                // Set iframe to the height reported by the contentWindow
+                iframe.style.height = event.data.scrollHeight + "px";
+            }
+            if (
+                event.data.authentikFieldValue !== undefined &&
+                iframe.previousElementSibling !== null &&
+                iframe.previousElementSibling.tagName === "INPUT"
+            ) {
+                // Set hidden input value to the value reported by the contentValue
+                (iframe.previousElementSibling as HTMLInputElement).value = event.data.authentikFieldValue;
+            }
+        });
+    }
+
     static get styles(): CSSResult[] {
         return [
             PFBase,
@@ -153,6 +178,39 @@ ${prompt.initialValue}</textarea
                     ?required=${prompt.required}
                     value="${prompt.initialValue}"
                 />`;
+            case PromptTypeEnum.Html:
+                return `<!-- TODO: existing value? --><input
+                    type="hidden"
+                    name="${prompt.fieldKey}"
+                    class="pf-c-form-control"
+                    ?required=${prompt.required}>
+                    <iframe class="ak-html-prompt-iframe" style="width: 100%" src="data:text/html,` +
+                    encodeURI(prompt.placeholder.match(/<body\b/i) != null ? prompt.placeholder : `<!doctype html>
+                        <!-- TODO: dynamic URLs -->
+                        <link rel="stylesheet" href="http://localhost:9000/static/dist/patternfly.min.css">
+                        <link rel="stylesheet" href="http://localhost:9000/static/dist/authentik.css">
+                        <style>html, body { overflow: visible !important; height: auto !important; }</style>
+                        <script>
+                            window.onload = window.onresize = () => window.parent.postMessage({ scrollHeight: document.documentElement.offsetHeight }, "*");
+                            window.authentikField = {
+                                // TODO: other field metadata?
+                                name: "${prompt.fieldKey}",
+                                required: ${prompt.required},
+                                internalValue: {}, // TODO: existing value
+                                get value() { return window.authentikField.internalValue; },
+                                set value(value) {
+                                    window.authentikField.internalValue = value;
+                                    window.parent.postMessage({ authentikFieldValue: JSON.stringify(window.authentikField.value) }, "*");
+                                },
+                                update() {
+                                    window.parent.postMessage({ authentikFieldValue: JSON.stringify(window.authentikField.value) }, "*");
+                                }
+                            };
+                        </script>
+                        <body class="pf-c-form-control">
+                        ${prompt.placeholder}
+                    `) +
+                    `"></iframe>`;
             case PromptTypeEnum.Separator:
                 return html`<ak-divider>${prompt.placeholder}</ak-divider>`;
             case PromptTypeEnum.Hidden:

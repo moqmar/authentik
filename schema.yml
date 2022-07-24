@@ -24578,6 +24578,7 @@ paths:
           - email
           - file
           - hidden
+          - html
           - number
           - password
           - radio-button-group
@@ -38745,6 +38746,7 @@ components:
       - file
       - separator
       - hidden
+      - html
       - static
       - ak-locale
       type: string

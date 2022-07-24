@@ -18,6 +18,7 @@ from rest_framework.fields import (
     HiddenField,
     IntegerField,
     ReadOnlyField,
+    JSONField,
 )
 from rest_framework.serializers import BaseSerializer
 from structlog.stdlib import get_logger
@@ -84,6 +85,9 @@ class FieldTypes(models.TextChoices):
 
     SEPARATOR = "separator", _("Separator: Static Separator Line")
     HIDDEN = "hidden", _("Hidden: Hidden field, can be used to insert data into form.")
+    HTML = "html", _(
+            "HTML: Fully customizable field rendered as an iframe."
+        )
     STATIC = "static", _("Static: Static value, displayed as-is.")
 
     AK_LOCALE = "ak-locale", _("authentik: Selection of locales authentik supports")
@@ -287,6 +291,9 @@ class Prompt(SerializerModel):
             field_class = DateTimeField
         if self.type == FieldTypes.FILE:
             field_class = InlineFileField
+        if self.type == FieldTypes.HTML:
+            field_class = JSONField
+            kwargs["binary"] = True
         if self.type == FieldTypes.SEPARATOR:
             kwargs["required"] = False
             kwargs["label"] = ""
