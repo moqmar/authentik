@@ -184,32 +184,38 @@ ${prompt.initialValue}</textarea
                     name="${prompt.fieldKey}"
                     class="pf-c-form-control"
                     ?required=${prompt.required}>
-                    <iframe class="ak-html-prompt-iframe" style="width: 100%" src="data:text/html,` +
-                    encodeURI(prompt.placeholder.match(/<body\b/i) != null ? prompt.placeholder : `<!doctype html>
-                        <!-- TODO: dynamic URLs -->
-                        <link rel="stylesheet" href="http://localhost:9000/static/dist/patternfly.min.css">
-                        <link rel="stylesheet" href="http://localhost:9000/static/dist/authentik.css">
-                        <style>html, body { overflow: visible !important; height: auto !important; }</style>
-                        <script>
-                            window.onload = window.onresize = () => window.parent.postMessage({ scrollHeight: document.documentElement.offsetHeight }, "*");
-                            window.authentikField = {
-                                // TODO: other field metadata?
-                                name: "${prompt.fieldKey}",
-                                required: ${prompt.required},
-                                internalValue: {}, // TODO: existing value
-                                get value() { return window.authentikField.internalValue; },
-                                set value(value) {
-                                    window.authentikField.internalValue = value;
-                                    window.parent.postMessage({ authentikFieldValue: JSON.stringify(window.authentikField.value) }, "*");
-                                },
-                                update() {
-                                    window.parent.postMessage({ authentikFieldValue: JSON.stringify(window.authentikField.value) }, "*");
-                                }
-                            };
-                        </script>
-                        <body class="pf-c-form-control">
-                        ${prompt.placeholder}
-                    `) +
+                    <iframe class="ak-html-prompt-iframe" style="width: 100%" src="` + (
+                        (prompt.placeholder.indexOf("<@") === 0) ?
+                            (prompt.placeholder.substring(2).replace(/>\s*$/, "")) : (
+                                (prompt.placeholder.indexOf("<!") === 0) ?
+                                    ("data:text/html," + encodeURI(prompt.placeholder)) :
+                                    ("data:text/html," + encodeURI(`<!doctype html>
+                                        <!-- TODO: dynamic URLs -->
+                                        <link rel="stylesheet" href="http://localhost:9000/static/dist/patternfly.min.css">
+                                        <link rel="stylesheet" href="http://localhost:9000/static/dist/authentik.css">
+                                        <style>html, body { overflow: visible !important; height: auto !important; }</style>
+                                        <script>
+                                            window.onload = window.onresize = () => window.parent.postMessage({ scrollHeight: document.documentElement.offsetHeight }, "*");
+                                            window.authentikField = {
+                                                // TODO: other field metadata?
+                                                name: "${prompt.fieldKey}",
+                                                required: ${prompt.required},
+                                                internalValue: {}, // TODO: existing value
+                                                get value() { return window.authentikField.internalValue; },
+                                                set value(value) {
+                                                    window.authentikField.internalValue = value;
+                                                    window.parent.postMessage({ authentikFieldValue: JSON.stringify(window.authentikField.value) }, "*");
+                                                },
+                                                update() {
+                                                    window.parent.postMessage({ authentikFieldValue: JSON.stringify(window.authentikField.value) }, "*");
+                                                }
+                                            };
+                                        </script>
+                                        <body>
+                                        ${prompt.placeholder}
+                                    `))
+                            )
+                    ) +
                     `"></iframe>`;
             case PromptTypeEnum.Separator:
                 return html`<ak-divider>${prompt.placeholder}</ak-divider>`;
